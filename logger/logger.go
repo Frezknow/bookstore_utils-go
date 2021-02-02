@@ -1,30 +1,36 @@
-package logger 
 
+package logger
 
 import (
 	"fmt"
-	"os"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
+	"os"
+	"strings"
 )
-const(
-	envLogLevel = "LOG_LEVEL"
+
+const (
+	envLogLevel  = "LOG_LEVEL"
 	envLogOutput = "LOG_OUTPUT"
 )
-var log logger
-type bookstoreLogger interface{
+
+var (
+	log logger
+)
+
+type bookstoreLogger interface {
 	Print(v ...interface{})
-	Printf(format string,v ...interface{})
-	// Info(msg string, tags ...zap.Field)
-	// Error(msg string, err error, tags ...zap.Field)
+	Printf(format string, v ...interface{})
 }
-type logger  struct{
+
+type logger struct {
 	log *zap.Logger
 }
+
 func init() {
 	logConfig := zap.Config{
 		OutputPaths: []string{getOutput()},
-		Level:       zap.NewAtomicLevelAt(zap.InfoLevel),
+		Level:       zap.NewAtomicLevelAt(getLevel()),
 		Encoding:    "json",
 		EncoderConfig: zapcore.EncoderConfig{
 			LevelKey:     "level",
@@ -35,44 +41,50 @@ func init() {
 			EncodeCaller: zapcore.ShortCallerEncoder,
 		},
 	}
+
 	var err error
 	if log.log, err = logConfig.Build(); err != nil {
 		panic(err)
 	}
 }
-func getOutput() string{
-	output := strings.TrimSpace(os.Geten(envLogLevel))
-	if output == ""{
+
+func getLevel() zapcore.Level {
+	switch strings.ToLower(strings.TrimSpace(os.Getenv(envLogLevel))) {
+	case "debug":
+		return zap.DebugLevel
+	case "info":
+		return zap.InfoLevel
+	case "error":
+		return zap.ErrorLevel
+	default:
+		return zap.InfoLevel
+	}
+}
+
+func getOutput() string {
+	output := strings.TrimSpace(os.Getenv(envLogOutput))
+	if output == "" {
 		return "stdout"
 	}
 	return output
 }
-func getLevel() zapcore.AtomicLevel{
-	switch switch strings.ToLower(strings.TrimSpace(os.Geten(envLogLevel))){
-	 case"debug":
-		return zap.DebugLevel
-	 case"info":
-		return zap.InfoLevel
-	 case"error":
-		return zap.ErrorLevel
-	 default:
-		return zap.InfoLevel
-	}
-	return zap.InfoLevel
-}
-func GetLogger() bookstoreLogger{
+
+func GetLogger() bookstoreLogger {
 	return log
 }
-func (l logger) Printf(format string,v ...interface{}){
-	if len(v) == 0{
+
+func (l logger) Printf(format string, v ...interface{}) {
+	if len(v) == 0 {
 		Info(format)
-	}else{
-		Info(fmt.Sprintf(format,v...)
+	} else {
+		Info(fmt.Sprintf(format, v...))
 	}
 }
-func (l logger) Print(format string,v ...interface{}){
-	 Info(fmt.Sprintf("%v",v))
+
+func (l logger) Print(v ...interface{}) {
+	Info(fmt.Sprintf("%v", v))
 }
+
 func Info(msg string, tags ...zap.Field) {
 	log.log.Info(msg, tags...)
 	log.log.Sync()
