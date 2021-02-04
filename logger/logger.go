@@ -14,6 +14,7 @@ const (
 	envLogOutput = "LOG_OUTPUT"
 )
 
+
 var (
 	log logger
 )
